@@ -21,6 +21,9 @@ class PasienSeeder extends Seeder
      */
     public function run(): void
     {
+
+        activity()->disableLogging();
+
         DB::transaction(function () {
             $this->seedShowcasePasien();
             $this->seedBulkPasien();
