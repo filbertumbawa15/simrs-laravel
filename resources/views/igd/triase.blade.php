@@ -14,20 +14,45 @@
     <div class="card">
         <div class="card-header"><h3 class="font-semibold">Kategori Triase</h3></div>
         <div class="card-body">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 @foreach ([
-                    'MERAH'  => ['icon' => '🔴', 'label' => 'MERAH', 'desc' => 'Resusitasi - Henti napas/jantung, syok, multi trauma berat', 'border' => 'border-red-500', 'bg' => 'peer-checked:bg-red-50'],
-                    'KUNING' => ['icon' => '🟡', 'label' => 'KUNING', 'desc' => 'Emergent - Sesak, nyeri dada, perdarahan aktif, fraktur terbuka', 'border' => 'border-yellow-500', 'bg' => 'peer-checked:bg-yellow-50'],
-                    'HIJAU'  => ['icon' => '🟢', 'label' => 'HIJAU', 'desc' => 'Urgent - Demam, luka ringan, sakit ringan-sedang', 'border' => 'border-green-500', 'bg' => 'peer-checked:bg-green-50'],
-                    'HITAM'  => ['icon' => '⚫', 'label' => 'HITAM', 'desc' => 'DOA - Death on Arrival, tidak ada tanda kehidupan', 'border' => 'border-gray-700', 'bg' => 'peer-checked:bg-gray-100'],
+                    'MERAH'  => [
+                        'icon' => '🔴', 'label' => 'MERAH', 'desc' => 'Resusitasi - Henti napas/jantung, syok, trauma berat',
+                        'active_border' => 'peer-checked:border-red-600 peer-checked:ring-2 peer-checked:ring-red-200',
+                        'active_bg' => 'peer-checked:bg-red-50'
+                    ],
+                    'KUNING' => [
+                        'icon' => '🟡', 'label' => 'KUNING', 'desc' => 'Emergent - Sesak, nyeri dada, perdarahan aktif',
+                        'active_border' => 'peer-checked:border-yellow-500 peer-checked:ring-2 peer-checked:ring-yellow-200',
+                        'active_bg' => 'peer-checked:bg-yellow-50'
+                    ],
+                    'HIJAU'  => [
+                        'icon' => '🟢', 'label' => 'HIJAU', 'desc' => 'Urgent - Demam, luka ringan, sakit sedang',
+                        'active_border' => 'peer-checked:border-green-600 peer-checked:ring-2 peer-checked:ring-green-200',
+                        'active_bg' => 'peer-checked:bg-green-50'
+                    ],
+                    'HITAM'  => [
+                        'icon' => '⚫', 'label' => 'HITAM', 'desc' => 'DOA - Death on Arrival, tidak ada tanda kehidupan',
+                        'active_border' => 'peer-checked:border-gray-800 peer-checked:ring-2 peer-checked:ring-gray-200',
+                        'active_bg' => 'peer-checked:bg-gray-100'
+                    ],
                 ] as $val => $cfg)
-                    <label class="cursor-pointer">
+                    <label class="relative cursor-pointer group">
                         <input type="radio" name="kategori" value="{{ $val }}" required class="sr-only peer">
-                        <div class="border-2 border-gray-200 rounded-lg p-4 h-full peer-checked:{{ $cfg['border'] }} {{ $cfg['bg'] }} transition">
-                            <div class="text-3xl">{{ $cfg['icon'] }}</div>
-                            <div class="font-bold text-lg mt-1">{{ $cfg['label'] }}</div>
-                            <div class="text-xs text-gray-600 mt-1">{{ $cfg['desc'] }}</div>
+                        <div class="border-2 border-gray-200 rounded-xl p-4 h-full transition-all duration-200 {{ $cfg['active_border'] }} {{ $cfg['active_bg'] }} group-hover:border-gray-300 shadow-sm">
+                            <div class="flex justify-between items-start">
+                                <div class="text-3xl">{{ $cfg['icon'] }}</div>
+                                <div class="hidden peer-checked:block">
+                                    <svg class="w-6 h-6 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="font-bold text-lg mt-2 tracking-wide">{{ $cfg['label'] }}</div>
+                            <div class="text-xs text-gray-500 mt-1 leading-relaxed">{{ $cfg['desc'] }}</div>
                         </div>
+                        {{-- Overlay ring for focus/selected --}}
+                        <div class="absolute inset-0 rounded-xl peer-focus:ring-2 peer-focus:ring-offset-2 peer-focus:ring-blue-500 pointer-events-none"></div>
                     </label>
                 @endforeach
             </div>
