@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\StatusKunjungan;
 use App\Enums\TipeKunjungan;
 use App\Models\Kunjungan;
 use App\Models\TriaseIgd;
@@ -21,7 +22,7 @@ class IgdController extends Controller
         $kunjungan = Kunjungan::query()
             ->with(['pasien', 'triase.petugas'])
             ->where('tipe', TipeKunjungan::IGD)
-            ->whereNotIn('status', ['SELESAI', 'BATAL'])
+            ->whereNotIn('status', [StatusKunjungan::Selesai, StatusKunjungan::Batal])
             ->whereDate('tgl_masuk', '>=', now()->subDays(2))
             ->get()
             ->sortBy([

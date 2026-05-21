@@ -12,37 +12,38 @@
     <div class="card border-l-4 border-red-600">
         <div class="card-body">
             <div class="text-xs text-gray-500">🔴 MERAH — Resusitasi</div>
-            <div class="text-2xl font-bold text-red-700">{{ $grouped['MERAH']->count() ?? 0 }}</div>
+            <div class="text-2xl font-bold text-red-700">{{ optional($grouped->get('MERAH'))->count() ?? 0 }}</div>
             <div class="text-xs text-gray-500">Tangani SEGERA</div>
         </div>
     </div>
     <div class="card border-l-4 border-yellow-500">
         <div class="card-body">
             <div class="text-xs text-gray-500">🟡 KUNING — Emergent</div>
-            <div class="text-2xl font-bold text-yellow-700">{{ $grouped['KUNING']->count() ?? 0 }}</div>
+            <div class="text-2xl font-bold text-yellow-700">{{ optional($grouped->get('KUNING'))->count() ?? 0 }}</div>
             <div class="text-xs text-gray-500">&lt; 10 menit</div>
         </div>
     </div>
     <div class="card border-l-4 border-green-600">
         <div class="card-body">
             <div class="text-xs text-gray-500">🟢 HIJAU — Urgent</div>
-            <div class="text-2xl font-bold text-green-700">{{ $grouped['HIJAU']->count() ?? 0 }}</div>
+            <div class="text-2xl font-bold text-green-700">{{ optional($grouped->get('HIJAU'))->count() ?? 0 }}</div>
             <div class="text-xs text-gray-500">&lt; 30 menit</div>
         </div>
     </div>
     <div class="card border-l-4 border-gray-700">
         <div class="card-body">
             <div class="text-xs text-gray-500">⚫ HITAM — DOA</div>
-            <div class="text-2xl font-bold text-gray-900">{{ $grouped['HITAM']->count() ?? 0 }}</div>
+            <div class="text-2xl font-bold text-gray-900">{{ optional($grouped->get('HITAM'))->count() ?? 0 }}</div>
             <div class="text-xs text-gray-500">Death on Arrival</div>
         </div>
     </div>
 </div>
 
 {{-- Belum triase --}}
-@if (isset($grouped['BELUM_TRIASE']) && $grouped['BELUM_TRIASE']->isNotEmpty())
+@php $belumTriase = $grouped->get('BELUM_TRIASE'); @endphp
+@if ($belumTriase && $belumTriase->isNotEmpty())
     <div class="alert alert-warning">
-        <strong>⚠ {{ $grouped['BELUM_TRIASE']->count() }} pasien belum ditriase</strong> —
+        <strong>⚠ {{ $belumTriase->count() }} pasien belum ditriase</strong> —
         per standar JCI/KARS, triase harus dilakukan dalam 5 menit sejak pasien tiba.
     </div>
     <div class="card mb-6 border-2 border-amber-400">
@@ -60,7 +61,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach ($grouped['BELUM_TRIASE'] as $kj)
+                    @foreach ($belumTriase as $kj)
                         <tr class="bg-amber-50">
                             <td class="text-xs">{{ $kj->tgl_masuk->format('H:i') }}</td>
                             <td>
@@ -85,7 +86,8 @@
 
 {{-- Per kategori --}}
 @foreach (['MERAH', 'KUNING', 'HIJAU', 'HITAM'] as $kat)
-    @if (isset($grouped[$kat]) && $grouped[$kat]->isNotEmpty())
+    @php $list = $grouped->get($kat); @endphp
+    @if ($list && $list->isNotEmpty())
         @php
             [$bgClass, $textClass, $icon, $label] = match ($kat) {
                 'MERAH'  => ['bg-red-100 border-red-500', 'text-red-900', '🔴', 'MERAH — RESUSITASI'],
@@ -100,7 +102,7 @@
                 <h3 class="font-bold {{ $textClass }}">
                     {{ $icon }} {{ $label }}
                 </h3>
-                <span class="badge badge-gray">{{ $grouped[$kat]->count() }} pasien</span>
+                <span class="badge badge-gray">{{ $list->count() }} pasien</span>
             </div>
             <div class="overflow-x-auto">
                 <table class="table">
@@ -114,7 +116,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($grouped[$kat] as $kj)
+                        @foreach ($list as $kj)
                             <tr>
                                 <td class="text-xs">{{ $kj->tgl_masuk->format('d M H:i') }}</td>
                                 <td>
@@ -123,8 +125,8 @@
                                         {{ $kj->pasien->no_rm }} • {{ $kj->pasien->umur }} thn
                                     </div>
                                 </td>
-                                <td class="text-sm">{{ Str::limit($kj->triase?->keluhan_utama, 80) }}</td>
-                                <td class="text-xs">{{ $kj->triase?->petugas?->name }}</td>
+                                <td class="text-sm">{{ Str::limit(optional($kj->triase)->keluhan_utama, 80) }}</td>
+                                <td class="text-xs">{{ optional($kj->triase?->petugas)->name }}</td>
                                 <td class="text-right">
                                     <a href="{{ route('kunjungan.show', $kj) }}" class="btn-secondary btn-sm">Detail</a>
                                 </td>
