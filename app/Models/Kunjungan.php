@@ -22,9 +22,17 @@ class Kunjungan extends Model
     protected $table = 'kunjungan';
 
     protected $fillable = [
-        'no_kunjungan', 'pasien_id', 'tipe',
-        'tgl_masuk', 'tgl_keluar', 'status', 'penjamin',
-        'asuransi_pasien_id', 'no_rujukan', 'no_sep', 'created_by',
+        'no_kunjungan',
+        'pasien_id',
+        'tipe',
+        'tgl_masuk',
+        'tgl_keluar',
+        'status',
+        'penjamin',
+        'asuransi_pasien_id',
+        'no_rujukan',
+        'no_sep',
+        'created_by',
     ];
 
     protected function casts(): array
@@ -158,5 +166,10 @@ class Kunjungan extends Model
     public function scopeTipeIGD($query)
     {
         return $query->where('tipe', TipeKunjungan::IGD);
+    }
+
+    public function orderRadiologi(): HasMany
+    {
+        return $this->hasMany(OrderRadiologi::class);
     }
 }

@@ -19,7 +19,7 @@ export default {
             colors: {
                 // Primary: medical teal — kalem, tidak agresif, beda dari kompetitor
                 primary: {
-                    50: '#f0fdfa',
+                    50:  '#f0fdfa',
                     100: '#ccfbf1',
                     200: '#99f6e4',
                     300: '#5eead4',
@@ -33,17 +33,17 @@ export default {
                 },
                 // Status colors khusus RS
                 triase: {
-                    merah: '#dc2626',
+                    merah:  '#dc2626',
                     kuning: '#eab308',
-                    hijau: '#16a34a',
-                    hitam: '#1f2937',
+                    hijau:  '#16a34a',
+                    hitam:  '#1f2937',
                 },
                 kamar: {
                     tersedia: '#10b981',
-                    terisi: '#ef4444',
+                    terisi:   '#ef4444',
                     reserved: '#f59e0b',
                     maintenance: '#6b7280',
-                    kotor: '#f97316',
+                    kotor:    '#f97316',
                 },
             },
         },

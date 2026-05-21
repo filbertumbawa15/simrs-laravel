@@ -45,6 +45,7 @@ class BillingService
                 'tindakan.tindakan',
                 'orderLab.details.parameter',
                 'resep.details',
+                'orderRadiologi.details.pemeriksaan',
             ]);
 
             // 1. Konsultasi (untuk RJ)
@@ -89,7 +90,23 @@ class BillingService
                 }
             }
 
-            // 4. Obat — hanya resep yang sudah DISERAHKAN
+
+            // 4. Radiologi
+            foreach ($kunjungan->orderRadiologi as $orderRad) {
+                foreach ($orderRad->details as $detail) {
+                    $this->tambahDetail($tagihan, [
+                        'kategori' => 'RADIOLOGI',
+                        'referensi_type' => \App\Models\OrderRadiologi::class,
+                        'referensi_id' => $orderRad->id,
+                        'deskripsi' => 'Radiologi: ' . $detail->pemeriksaan->nama,
+                        'qty' => 1,
+                        'harga' => (float) $detail->tarif,
+                        'subtotal' => (float) $detail->tarif,
+                    ]);
+                }
+            }
+
+            // 5. Obat — hanya resep yang sudah DISERAHKAN
             foreach ($kunjungan->resep->where('status', 'DISERAHKAN') as $resep) {
                 foreach ($resep->details as $detailResep) {
                     $this->tambahDetail($tagihan, [
@@ -104,7 +121,7 @@ class BillingService
                 }
             }
 
-            // 5. Kamar (untuk RI)
+            // 6. Kamar (untuk RI)
             if ($kunjungan->rawatInap) {
                 foreach ($kunjungan->rawatInap->kamarInap as $ki) {
                     $hari = $ki->durasi_hari;

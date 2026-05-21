@@ -3,17 +3,17 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\IgdController;
+use App\Http\Controllers\KamarController;
 use App\Http\Controllers\KunjunganController;
+use App\Http\Controllers\LabController;
 use App\Http\Controllers\PasienController;
+use App\Http\Controllers\PdfController;
+use App\Http\Controllers\RadiologiController;
+use App\Http\Controllers\RawatInapController;
 use App\Http\Controllers\RawatJalanController;
 use App\Http\Controllers\ResepController;
 use Illuminate\Support\Facades\Route;
-
-/*
-|--------------------------------------------------------------------------
-| Public routes (auth)
-|--------------------------------------------------------------------------
-*/
 
 Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -24,11 +24,6 @@ Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
 
-/*
-|--------------------------------------------------------------------------
-| Authenticated routes
-|--------------------------------------------------------------------------
-*/
 Route::middleware(['auth', 'active'])->group(function () {
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -75,5 +70,60 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('{tagihan}/finalize', 'finalize')->name('finalize');
         Route::get('{tagihan}/bayar', 'bayarForm')->name('bayar.form');
         Route::post('{tagihan}/bayar', 'bayar')->name('bayar');
+    });
+
+    Route::controller(LabController::class)->prefix('lab')->name('lab.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('{order}', 'show')->name('show');
+        Route::post('{order}/sampling', 'sampling')->name('sampling');
+        Route::post('{order}/proses', 'proses')->name('proses');
+        Route::get('{order}/input', 'inputForm')->name('input');
+        Route::post('{order}/input', 'inputStore')->name('input.store');
+        Route::post('{order}/validate', 'validate_')->name('validate');
+    });
+
+    Route::controller(RawatInapController::class)->prefix('ri')->name('ri.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('admisi', 'admisiForm')->name('admisi.form');
+        Route::post('admisi', 'admisiStore')->name('admisi.store');
+        Route::get('{ri}', 'show')->name('show');
+        Route::get('{ri}/pindah', 'pindahForm')->name('pindah.form');
+        Route::post('{ri}/pindah', 'pindahStore')->name('pindah.store');
+        Route::get('{ri}/pulang', 'pulangForm')->name('pulang.form');
+        Route::post('{ri}/pulang', 'pulangStore')->name('pulang.store');
+    });
+
+    Route::controller(KamarController::class)->prefix('kamar')->name('kamar.')->group(function () {
+        Route::get('board', 'board')->name('board');
+        Route::post('{kamar}/status', 'updateStatus')->name('update.status');
+    });
+
+    Route::controller(IgdController::class)->prefix('igd')->name('igd.')->group(function () {
+        Route::get('/', 'board')->name('board');
+        Route::get('{kunjungan}/triase', 'triaseForm')->name('triase.form');
+        Route::post('{kunjungan}/triase', 'triaseStore')->name('triase.store');
+    });
+
+    Route::controller(PdfController::class)->prefix('pdf')->name('pdf.')->group(function () {
+        Route::get('resep/{resep}', 'resep')->name('resep');
+        Route::get('kuitansi/{pembayaran}', 'kuitansi')->name('kuitansi');
+        Route::get('resume-medis/{ri}', 'resumeMedis')->name('resume');
+        Route::get('hasil-lab/{order}', 'hasilLab')->name('hasil-lab');
+    });
+
+    Route::controller(RadiologiController::class)->prefix('rad')->name('rad.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('{order}', 'show')->name('show');
+        Route::get('{order}/eksekusi', 'eksekusiForm')->name('eksekusi.form');
+        Route::post('{order}/eksekusi', 'eksekusiStore')->name('eksekusi.store');
+        Route::get('{order}/bacaan', 'bacaanForm')->name('bacaan.form');
+        Route::post('{order}/bacaan', 'bacaanStore')->name('bacaan.store');
+        Route::post('{order}/validate', 'validasi')->name('validate');
+        Route::get('image/{image}', 'viewImage')->name('image.view');
+        Route::delete('image/{image}', 'deleteImage')->name('image.delete');
     });
 });

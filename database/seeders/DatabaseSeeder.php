@@ -19,6 +19,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+
+        activity()->disableLogging();
+
         $this->command->info('=== SIHRS Database Seeder ===');
         $this->command->newLine();
 
