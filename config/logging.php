@@ -11,26 +11,14 @@ return [
     |--------------------------------------------------------------------------
     | Default Log Channel
     |--------------------------------------------------------------------------
-    |
-    | This option defines the default log channel that is utilized to write
-    | messages to your logs. The value provided here should match one of
-    | the channels present in the list of "channels" configured below.
-    |
     */
-
     'default' => env('LOG_CHANNEL', 'stack'),
 
     /*
     |--------------------------------------------------------------------------
     | Deprecations Log Channel
     |--------------------------------------------------------------------------
-    |
-    | This option controls the log channel that should be used to log warnings
-    | regarding deprecated PHP and library features. This allows you to get
-    | your application ready for upcoming major versions of dependencies.
-    |
     */
-
     'deprecations' => [
         'channel' => env('LOG_DEPRECATIONS_CHANNEL', 'null'),
         'trace' => env('LOG_DEPRECATIONS_TRACE', false),
@@ -40,21 +28,17 @@ return [
     |--------------------------------------------------------------------------
     | Log Channels
     |--------------------------------------------------------------------------
-    |
-    | Here you may configure the log channels for your application. Laravel
-    | utilizes the Monolog PHP logging library, which includes a variety
-    | of powerful log handlers and formatters that you're free to use.
-    |
-    | Available drivers: "single", "daily", "slack", "syslog",
-    |                    "errorlog", "monolog", "custom", "stack"
-    |
+    | SIHRS pakai stack default — separate channel untuk:
+    | - 'daily': log harian umum (rotasi 14 hari)
+    | - 'audit': audit trail (rotasi 5 tahun, NOT pruned otomatis)
+    | - 'bpjs': trace komunikasi BPJS V-Claim
+    | - 'satusehat': trace komunikasi SATUSEHAT FHIR
     */
-
     'channels' => [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            'channels' => explode(',', env('LOG_STACK', 'single')),
             'ignore_exceptions' => false,
         ],
 
@@ -73,11 +57,35 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'audit' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/audit.log'),
+            'level' => 'info',
+            'days' => 1825, // 5 tahun
+            'replace_placeholders' => true,
+        ],
+
+        'bpjs' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/bpjs.log'),
+            'level' => 'debug',
+            'days' => 90,
+            'replace_placeholders' => true,
+        ],
+
+        'satusehat' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/satusehat.log'),
+            'level' => 'debug',
+            'days' => 90,
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
-            'username' => env('LOG_SLACK_USERNAME', env('APP_NAME', 'Laravel')),
-            'emoji' => env('LOG_SLACK_EMOJI', ':boom:'),
+            'username' => env('LOG_SLACK_USERNAME', 'SIHRS Alert'),
+            'emoji' => env('LOG_SLACK_EMOJI', ':hospital:'),
             'level' => env('LOG_LEVEL', 'critical'),
             'replace_placeholders' => true,
         ],
@@ -98,10 +106,10 @@ return [
             'driver' => 'monolog',
             'level' => env('LOG_LEVEL', 'debug'),
             'handler' => StreamHandler::class,
-            'handler_with' => [
+            'formatter' => env('LOG_STDERR_FORMATTER'),
+            'with' => [
                 'stream' => 'php://stderr',
             ],
-            'formatter' => env('LOG_STDERR_FORMATTER'),
             'processors' => [PsrLogMessageProcessor::class],
         ],
 
