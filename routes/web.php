@@ -104,6 +104,12 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/', 'board')->name('board');
         Route::get('{kunjungan}/triase', 'triaseForm')->name('triase.form');
         Route::post('{kunjungan}/triase', 'triaseStore')->name('triase.store');
+        Route::get('/periksa/{kunjungan}', 'periksa')->name('periksa');
+        Route::post('/periksa/{kunjungan}', 'periksaStore')->name('periksa.store');
+        Route::post('/admisi/{kunjungan}', 'admisi')->name('admisi.store');
+        Route::post('/rujuk/{kunjungan}', 'rujuk')->name('rujuk.store');
+        Route::post('/pulang/{kunjungan}', 'pulangIgd')->name('pulang.store');
+        Route::post('/meninggal/{kunjungan}', 'meninggal')->name('meninggal.store');
     });
 
     Route::controller(PdfController::class)->prefix('pdf')->name('pdf.')->group(function () {
@@ -126,4 +132,10 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('image/{image}', 'viewImage')->name('image.view');
         Route::delete('image/{image}', 'deleteImage')->name('image.delete');
     });
+
+    // ICD-10 search (di luar group igd biar bisa dipakai modul lain)
+    Route::get('/icd10/search', [\App\Http\Controllers\IgdController::class, 'icd10Search'])->name('icd10.search');
+
+    // Hapus diagnosa
+    Route::delete('/diagnosa/{diagnosa}', [\App\Http\Controllers\DiagnosaController::class, 'destroy'])->name('diagnosa.destroy');
 });

@@ -76,6 +76,11 @@ class RolePermissionSeeder extends Seeder
             'rad.execute',
             'rad.read',
             'rad.validate',
+            // IGD
+            'igd.view',
+            'igd.triase',
+            'igd.periksa',
+            'igd.disposisi',
         ];
 
         foreach ($permissions as $perm) {
@@ -118,7 +123,10 @@ class RolePermissionSeeder extends Seeder
                 'farmasi.create_resep',
                 'pdf.print',
                 'rad.view',
-                'rad.order'
+                'rad.order',
+                'igd.view',
+                'igd.periksa',
+                'igd.disposisi',
             ],
 
             // ----- DOKTER SPESIALIS (DPJP RI) -----
@@ -137,7 +145,10 @@ class RolePermissionSeeder extends Seeder
                 'farmasi.create_resep',
                 'pdf.print',
                 'rad.view',
-                'rad.order'
+                'rad.order',
+                'igd.view',
+                'igd.periksa',
+                'igd.disposisi',
             ],
 
             // ----- DOKTER PK (Patologi Klinik) -----
@@ -157,6 +168,9 @@ class RolePermissionSeeder extends Seeder
                 'kunjungan.view',
                 'rj.view',
                 'ri.view',
+                'igd.view',
+                'igd.triase',
+                'igd.periksa',
             ],
 
             // ----- PERAWAT RI -----
@@ -164,6 +178,7 @@ class RolePermissionSeeder extends Seeder
             'PERAWAT_RI' => [
                 'pasien.view',
                 'kunjungan.view',
+                'igd.view',
                 'ri.view',
                 'ri.transfer_kamar',
             ],

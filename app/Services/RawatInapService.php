@@ -159,4 +159,62 @@ class RawatInapService
             return $ri->fresh();
         });
     }
+
+    public function admisiDariIgd(\App\Models\Kunjungan $kunjungan, array $data, string $userId): \App\Models\RawatInap
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($kunjungan, $data, $userId) {
+
+            // Lock kamar agar tidak double-booking
+            $kamar = \App\Models\Kamar::where('id', $data['kamar_id'])
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($kamar->status !== \App\Enums\StatusKamar::Tersedia) {
+                throw new \RuntimeException(
+                    "Kamar {$kamar->no_kamar} tidak tersedia (status: {$kamar->status->value}). "
+                        . "Pilih kamar lain."
+                );
+            }
+
+            // 1. Update tipe kunjungan IGD → RI
+            $kunjungan->update([
+                'tipe' => \App\Enums\TipeKunjungan::RawatInap,
+                'status' => \App\Enums\StatusKunjungan::DalamPemeriksaan,
+            ]);
+
+            // 2. Buat record rawat_inap
+            $ri = \App\Models\RawatInap::create([
+                'kunjungan_id' => $kunjungan->id,
+                'dpjp_id' => $data['dpjp_id'],
+                'tgl_masuk_ri' => now(),
+                'alasan_masuk' => $data['alasan_masuk'],
+            ]);
+
+            // 3. Buat record kamar_inap (history penempatan)
+            \App\Models\KamarInap::create([
+                'rawat_inap_id' => $ri->id,
+                'kamar_id' => $kamar->id,
+                'masuk' => now(),
+            ]);
+
+            // 4. Update status kamar jadi TERISI
+            $kamar->update([
+                'status' => \App\Enums\StatusKamar::Terisi,
+            ]);
+
+            // 5. Audit log (kalau aktif)
+            activity('rawat_inap')
+                ->performedOn($ri)
+                ->causedBy(\Illuminate\Support\Facades\Auth::user())
+                ->withProperties([
+                    'asal' => 'IGD',
+                    'no_kunjungan' => $kunjungan->no_kunjungan,
+                    'kamar' => $kamar->no_kamar,
+                    'dpjp_id' => $data['dpjp_id'],
+                ])
+                ->log('Admisi rawat inap dari IGD');
+
+            return $ri->fresh(['dpjp', 'kamarInap.kamar.kelas']);
+        });
+    }
 }
