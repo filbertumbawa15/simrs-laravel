@@ -41,6 +41,53 @@
         </div>
     </div>
 
+    {{-- Pre-check: kunjungan aktif --}}
+    @if ($kunjunganAktif ?? null)
+    <div class="card border-2 border-amber-400 bg-amber-50">
+        <div class="card-body">
+            <div class="flex items-start gap-3">
+                <div class="text-amber-600 text-2xl">⚠</div>
+                <div class="flex-1">
+                    <div class="font-bold text-amber-900 mb-1">Pasien masih memiliki kunjungan aktif</div>
+                    <p class="text-sm text-amber-800 mb-3">
+                        Sebelum membuat kunjungan baru, kunjungan sebelumnya harus diselesaikan terlebih dahulu:
+                    </p>
+                    <div class="bg-white border border-amber-200 rounded-lg p-3 mb-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <div class="font-mono text-sm font-medium text-gray-900">
+                                    {{ $kunjunganAktif->no_kunjungan }}
+                                </div>
+                                <div class="text-xs text-gray-500 mt-0.5">
+                                    <span class="badge badge-teal text-xs">{{ $kunjunganAktif->tipe->label() }}</span>
+                                    ·
+                                    <span class="badge badge-yellow text-xs">{{ $kunjunganAktif->status->label() }}</span>
+                                    · Sejak {{ $kunjunganAktif->tgl_masuk->diffForHumans() }}
+                                </div>
+                            </div>
+                            <a href="{{ route('kunjungan.show', $kunjunganAktif) }}"
+                               class="btn-primary btn-sm whitespace-nowrap">
+                                Buka kunjungan →
+                            </a>
+                        </div>
+                    </div>
+                    <p class="text-xs text-amber-700">
+                        <strong>Yang harus dilakukan:</strong>
+                        @if ($kunjunganAktif->tipe->value === 'RJ')
+                            Selesaikan pemeriksaan RJ (dokter selesai SOAP + diagnosa) → bayar → kunjungan otomatis SELESAI.
+                        @elseif ($kunjunganAktif->tipe->value === 'RI')
+                            Pulangkan pasien via menu Rawat Inap → bayar tagihan → kunjungan otomatis SELESAI.
+                        @else
+                            Selesaikan flow IGD (triase → pemeriksaan → pulang/admisi RI/rujuk) → bayar → SELESAI.
+                        @endif
+                        Kalau sudah tidak dipakai, bisa batalkan lewat halaman detail kunjungan.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     {{-- Tipe & Penjamin --}}
     <div class="card">
         <div class="card-header">
@@ -152,7 +199,15 @@
 
     <div class="flex items-center justify-end gap-3">
         <a href="{{ route('pasien.show', $pasien) }}" class="btn-secondary">Batal</a>
-        <button type="submit" class="btn-primary btn-lg">Daftarkan Kunjungan</button>
+        @if ($kunjunganAktif ?? null)
+            <button type="button"
+                    onclick="window.notify.warning('Selesaikan atau batalkan dulu kunjungan aktif {{ $kunjunganAktif->no_kunjungan }} sebelum daftarkan kunjungan baru.', 'Tidak Bisa Melanjutkan')"
+                    class="btn-primary btn-lg opacity-50 cursor-not-allowed">
+                Daftarkan Kunjungan
+            </button>
+        @else
+            <button type="submit" class="btn-primary btn-lg">Daftarkan Kunjungan</button>
+        @endif
     </div>
 </form>
 

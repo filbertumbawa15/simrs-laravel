@@ -41,28 +41,8 @@
                 </div>
                 @endif
 
-                {{-- Flash messages --}}
-                @if (session('success'))
-                <div class="alert alert-success">{{ session('success') }}</div>
-                @endif
-                @if (session('error'))
-                <div class="alert alert-error">{{ session('error') }}</div>
-                @endif
-                @if (session('warning'))
-                <div class="alert alert-warning">{{ session('warning') }}</div>
-                @endif
-
-                {{-- Validation errors global --}}
-                @if ($errors->any())
-                <div class="alert alert-error">
-                    <strong>Periksa kembali input:</strong>
-                    <ul class="mt-1 list-disc list-inside">
-                        @foreach ($errors->all() as $err)
-                        <li>{{ $err }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-                @endif
+                {{-- Flash messages via SweetAlert2 modal --}}
+                @include('partials.swal-flash')
 
                 {{-- Konten halaman --}}
                 @yield('content')

@@ -91,30 +91,41 @@ class KunjunganController extends Controller
     public function create(Request $request): View
     {
         $pasien = $request->filled('pasien_id')
-            ? Pasien::findOrFail($request->input('pasien_id'))
+            ? Pasien::with(['kunjungan' => fn ($q) => $q->aktif()->latest('tgl_masuk')])->findOrFail($request->input('pasien_id'))
             : null;
+
+        // Pre-check: pasien punya kunjungan aktif?
+        $kunjunganAktif = $pasien?->kunjungan->first();
 
         $poli = Poli::active()->orderBy('nama')->get();
         $dokter = Dokter::active()->orderBy('nama')->get();
 
-        return view('kunjungan.create', compact('pasien', 'poli', 'dokter'));
+        return view('kunjungan.create', compact('pasien', 'poli', 'dokter', 'kunjunganAktif'));
     }
 
     public function store(StoreKunjunganRequest $request): RedirectResponse
     {
         $data = $request->validated();
 
-        $kunjungan = DB::transaction(function () use ($data) {
-            $pasien = Pasien::findOrFail($data['pasien_id']);
-            $kunjungan = $this->pendaftaran->buatKunjungan($pasien, $data);
+        try {
+            $kunjungan = DB::transaction(function () use ($data) {
+                $pasien = Pasien::findOrFail($data['pasien_id']);
+                $kunjungan = $this->pendaftaran->buatKunjungan($pasien, $data);
 
-            // Kalau RJ, langsung assign ke poli
-            if ($kunjungan->tipe->value === 'RJ' && ! empty($data['poli_id'])) {
-                $this->rj->assignKePoli($kunjungan, $data['poli_id'], $data['dokter_id']);
-            }
+                // Kalau RJ, langsung assign ke poli
+                if ($kunjungan->tipe->value === 'RJ' && ! empty($data['poli_id'])) {
+                    $this->rj->assignKePoli($kunjungan, $data['poli_id'], $data['dokter_id']);
+                }
 
-            return $kunjungan;
-        });
+                return $kunjungan;
+            });
+        } catch (\DomainException $e) {
+            // Business rule violation (mis. pasien masih punya kunjungan aktif) —
+            // jangan crash ke 500, redirect back dengan flash + preserve input.
+            return back()
+                ->withInput()
+                ->with('error', $e->getMessage());
+        }
 
         // Redirect linear per tipe supaya user tidak bingung tahap selanjutnya:
         // - RI → langsung ke form admisi (pilih kamar + DPJP)
