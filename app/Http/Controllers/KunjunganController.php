@@ -116,9 +116,21 @@ class KunjunganController extends Controller
             return $kunjungan;
         });
 
-        return redirect()
-            ->route('kunjungan.show', $kunjungan)
-            ->with('success', "Kunjungan {$kunjungan->no_kunjungan} berhasil didaftarkan.");
+        // Redirect linear per tipe supaya user tidak bingung tahap selanjutnya:
+        // - RI → langsung ke form admisi (pilih kamar + DPJP)
+        // - IGD → ke form triase
+        // - RJ → detail kunjungan (dokter di poli yang lanjut)
+        return match ($kunjungan->tipe->value) {
+            'RI' => redirect()
+                ->route('ri.admisi.form', ['kunjungan_id' => $kunjungan->id])
+                ->with('success', "Kunjungan {$kunjungan->no_kunjungan} dibuat. Lanjutkan dengan pilih kamar."),
+            'IGD' => redirect()
+                ->route('igd.triase.form', $kunjungan)
+                ->with('success', "Kunjungan {$kunjungan->no_kunjungan} dibuat. WAJIB triase dalam 5 menit."),
+            default => redirect()
+                ->route('kunjungan.show', $kunjungan)
+                ->with('success', "Kunjungan {$kunjungan->no_kunjungan} berhasil didaftarkan."),
+        };
     }
 
     public function show(Kunjungan $kunjungan): View

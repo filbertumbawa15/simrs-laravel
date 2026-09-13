@@ -14,7 +14,10 @@
 @else
 
 <form method="POST" action="{{ route('kunjungan.store') }}" class="space-y-6"
-    x-data="{ tipe: '{{ old('tipe', 'RJ') }}' }">
+    x-data="{
+        tipe: '{{ old('tipe', 'RJ') }}',
+        penjamin: '{{ old('penjamin', 'UMUM') }}',
+    }">
     @csrf
     <input type="hidden" name="pasien_id" value="{{ $pasien->id }}">
 
@@ -65,14 +68,14 @@
 
             <div>
                 <label for="penjamin" class="label">Penjamin <span class="text-red-500">*</span></label>
-                <select id="penjamin" name="penjamin" required class="select">
-                    <option value="UMUM" @selected(old('penjamin')==='UMUM' )>Umum</option>
-                    <option value="BPJS" @selected(old('penjamin', 'BPJS' )==='BPJS' )>BPJS Kesehatan</option>
-                    <option value="ASURANSI" @selected(old('penjamin')==='ASURANSI' )>Asuransi Swasta</option>
+                <select id="penjamin" name="penjamin" x-model="penjamin" required class="select">
+                    <option value="UMUM">Umum</option>
+                    <option value="BPJS">BPJS Kesehatan</option>
+                    <option value="ASURANSI">Asuransi Swasta</option>
                 </select>
             </div>
 
-            <div x-show="document.getElementById('penjamin').value === 'BPJS'">
+            <div x-show="penjamin === 'BPJS'" x-transition>
                 <label class="label">No. SEP <span class="text-red-500">*</span></label>
                 <input name="no_sep" type="text" value="{{ old('no_sep') }}" class="input font-mono"
                     placeholder="Generate dari V-Claim BPJS">
@@ -82,6 +85,36 @@
             <div>
                 <label class="label">No. Rujukan (opsional)</label>
                 <input name="no_rujukan" type="text" value="{{ old('no_rujukan') }}" class="input">
+            </div>
+        </div>
+    </div>
+
+    {{-- Hint kalau tipe = RI --}}
+    <div class="card" x-show="tipe === 'RI'" x-transition>
+        <div class="card-body bg-purple-50 border-l-4 border-purple-500">
+            <div class="flex items-start gap-3">
+                <span class="text-purple-600 text-lg">🏥</span>
+                <div class="text-sm text-purple-900">
+                    <div class="font-semibold mb-1">Alur Rawat Inap</div>
+                    <p>Setelah pendaftaran, Anda akan diarahkan ke <strong>form admisi</strong>
+                        untuk pilih kamar & DPJP. Kunjungan RI baru akan aktif setelah pasien
+                        ditempatkan di kamar.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Hint kalau tipe = IGD --}}
+    <div class="card" x-show="tipe === 'IGD'" x-transition>
+        <div class="card-body bg-red-50 border-l-4 border-red-500">
+            <div class="flex items-start gap-3">
+                <span class="text-red-600 text-lg">🚨</span>
+                <div class="text-sm text-red-900">
+                    <div class="font-semibold mb-1">Alur IGD</div>
+                    <p>Setelah pendaftaran, pasien muncul di <strong>IGD Board</strong>.
+                        Petugas IGD wajib melakukan <strong>triase</strong> dalam 5 menit
+                        (per standar KARS/JCI).</p>
+                </div>
             </div>
         </div>
     </div>
