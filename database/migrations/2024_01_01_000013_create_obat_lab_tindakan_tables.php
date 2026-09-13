@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -26,7 +27,9 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index('golongan');
-            $table->fullText(['kode', 'nama', 'nama_generik']);
+            if (in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'])) {
+                $table->fullText(['kode', 'nama', 'nama_generik']);
+            }
         });
 
         Schema::create('stok_obat', function (Blueprint $table) {

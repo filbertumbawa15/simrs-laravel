@@ -70,8 +70,10 @@ class FarmasiService
     public function serahkanObat(Resep $resep, string $penyerahId): Resep
     {
         return DB::transaction(function () use ($resep, $penyerahId) {
+            $resep->load('details.obat');
+
             foreach ($resep->details as $detail) {
-                $this->keluarkanStokFefo($detail, $penyerahId);
+                $this->keluarkanStokFefo($detail, $resep, $penyerahId);
             }
 
             $resep->update([
@@ -88,7 +90,7 @@ class FarmasiService
      * Logic FEFO: keluarkan stok dari batch yang paling cepat expired.
      * Jika 1 batch tidak cukup, split ke beberapa batch.
      */
-    protected function keluarkanStokFefo(ResepDetail $detail, string $userId): void
+    protected function keluarkanStokFefo(ResepDetail $detail, Resep $resep, string $userId): void
     {
         $sisaButuh = $detail->jumlah;
         $batchUsed = [];
@@ -123,7 +125,7 @@ class FarmasiService
                 'jumlah' => -$ambil,
                 'saldo_sebelum' => $saldoSebelum,
                 'saldo_sesudah' => $saldoSebelum - $ambil,
-                'referensi' => "Resep {$detail->resep->no_resep}",
+                'referensi' => "Resep {$resep->no_resep}",
                 'user_id' => $userId,
             ]);
 

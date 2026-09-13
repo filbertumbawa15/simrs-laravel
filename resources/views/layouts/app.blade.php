@@ -9,6 +9,8 @@
     <title>@yield('title', 'Dashboard') — {{ config('app.name') }}</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    @stack('head')
 </head>
 
 <body class="min-h-screen bg-gray-50">

@@ -6,24 +6,76 @@ use App\Enums\MetodePembayaran;
 use App\Models\Kunjungan;
 use App\Models\Tagihan;
 use App\Services\BillingService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class BillingController extends Controller
 {
+    private const SORTABLE = ['no_tagihan', 'tgl_tagihan', 'total', 'sisa', 'status'];
+
     public function __construct(protected BillingService $service) {}
 
-    public function index(Request $request): View
+    public function index(): View
     {
-        $tagihan = Tagihan::query()
-            ->with(['kunjungan.pasien'])
-            ->when($request->input('status'), fn($q, $s) => $q->where('status', $s))
-            ->when($request->input('tanggal'), fn($q, $d) => $q->whereDate('tgl_tagihan', $d))
-            ->latest('tgl_tagihan')
-            ->paginate(20);
+        return view('billing.index');
+    }
 
-        return view('billing.index', compact('tagihan'));
+    public function data(Request $request): JsonResponse
+    {
+        $sort = $request->input('sort');
+        $order = strtolower($request->input('order', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $perPage = min(100, max(5, (int) $request->input('per_page', 20)));
+        $q = trim((string) $request->input('q', ''));
+
+        $query = Tagihan::query()
+            ->with(['kunjungan.pasien'])
+            ->when($request->input('status'), fn($qq, $s) => $qq->where('status', $s))
+            ->when($request->input('tanggal'), fn($qq, $d) => $qq->whereDate('tgl_tagihan', $d))
+            ->when($q !== '', fn($qq) => $qq->where(function ($x) use ($q) {
+                $x->where('no_tagihan', 'like', "%{$q}%")
+                  ->orWhereHas('kunjungan.pasien', fn($p) => $p->where('nama', 'like', "%{$q}%")
+                      ->orWhere('no_rm', 'like', "%{$q}%"));
+            }));
+
+        if ($sort && in_array($sort, self::SORTABLE, true)) {
+            $query->orderBy($sort, $order);
+        } else {
+            $query->latest('tgl_tagihan');
+        }
+
+        $p = $query->paginate($perPage);
+
+        return response()->json([
+            'data' => $p->getCollection()->map(fn ($t) => [
+                'id' => $t->id,
+                'no_tagihan' => $t->no_tagihan,
+                'tgl_tagihan' => $t->tgl_tagihan?->format('d M Y'),
+                'pasien' => [
+                    'nama' => $t->kunjungan->pasien->nama,
+                    'no_rm' => $t->kunjungan->pasien->no_rm,
+                ],
+                'no_kunjungan' => $t->kunjungan->no_kunjungan,
+                'total' => (float) $t->total,
+                'dibayar' => (float) $t->dibayar,
+                'sisa' => (float) $t->sisa,
+                'status' => $t->status?->value,
+                'status_label' => $t->status?->label(),
+                'urls' => [
+                    'show' => route('billing.show', $t),
+                    'bayar' => route('billing.bayar.form', $t),
+                ],
+            ]),
+            'meta' => [
+                'current_page' => $p->currentPage(),
+                'last_page' => $p->lastPage(),
+                'per_page' => $p->perPage(),
+                'total' => $p->total(),
+                'from' => $p->firstItem(),
+                'to' => $p->lastItem(),
+            ],
+        ]);
     }
 
     /**

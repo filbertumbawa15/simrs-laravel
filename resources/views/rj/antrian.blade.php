@@ -5,6 +5,10 @@
 @section('page-title', 'Antrian Rawat Jalan')
 @section('page-subtitle', 'Hari ini, '.now()->translatedFormat('l, d F Y'))
 
+@section('page-actions')
+    <x-auto-refresh :seconds="30" />
+@endsection
+
 @section('content')
 
 {{-- Filter poli --}}
@@ -84,6 +88,10 @@
                                 <td class="text-xs text-gray-500">{{ $rj->created_at->format('H:i') }}</td>
                                 <td class="text-right">
                                     <div class="flex items-center justify-end gap-2">
+                                        <a href="{{ route('pdf.tiket', $rj) }}" target="_blank"
+                                           class="btn-secondary btn-sm" title="Cetak tiket antrian">
+                                            🖨️
+                                        </a>
                                         @if (! $rj->waktu_panggilan)
                                             <form method="POST" action="{{ route('rj.panggil', $rj) }}" class="inline">
                                                 @csrf

@@ -5,6 +5,10 @@
 @section('page-title', 'Bed Management Board')
 @section('page-subtitle', 'Realtime status semua tempat tidur')
 
+@section('page-actions')
+    <x-auto-refresh :seconds="30" />
+@endsection
+
 @section('content')
 
 {{-- Statistik occupancy --}}

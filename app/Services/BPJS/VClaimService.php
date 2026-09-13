@@ -65,7 +65,7 @@ class VClaimService
                 't_sep' => array_merge([
                     'noKartu' => $asuransiPasien->no_polis,
                     'tglSep' => $kunjungan->tgl_masuk->format('Y-m-d'),
-                    'ppkPelayanan' => config('app.rs.kode'),
+                    'ppkPelayanan' => config('sihrs.rs_kode'),
                     'jnsPelayanan' => $kunjungan->tipe->value === 'RJ' ? '2' : '1', // 1=RI, 2=RJ
                     'klsRawat' => [
                         'klsRawatHak' => $asuransiPasien->kelas_hak ?? '3',

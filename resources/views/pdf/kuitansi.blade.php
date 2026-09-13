@@ -42,7 +42,7 @@
     <div class="ttd-grid">
         <div class="ttd-cell"></div>
         <div class="ttd-cell">
-            {{ config('app.rs.alamat') }}, {{ $pembayaran->tgl_bayar->translatedFormat('d F Y') }}<br>
+            {{ config('sihrs.rs_alamat') }}, {{ $pembayaran->tgl_bayar->translatedFormat('d F Y') }}<br>
             Kasir,
             <div style="height:55px"></div>
             <strong>{{ $pembayaran->kasir->name }}</strong>

@@ -9,6 +9,7 @@ use App\Models\Kunjungan;
 use App\Models\OrderRadiologi;
 use App\Models\PemeriksaanRadiologi;
 use App\Services\RadiologiService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -16,21 +17,70 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RadiologiController extends Controller
 {
+    private const SORTABLE = ['no_order', 'tgl_order', 'status', 'prioritas'];
+
     public function __construct(protected RadiologiService $service) {}
 
     /**
      * Worklist radiografer & radiolog.
      */
-    public function index(Request $request): View
+    public function index(): View
     {
-        $orders = OrderRadiologi::query()
-            ->with(['kunjungan.pasien', 'dokter', 'details.pemeriksaan'])
-            ->when($request->input('status'), fn ($q, $s) => $q->where('status', $s))
-            ->when($request->input('prioritas'), fn ($q, $p) => $q->where('prioritas', $p))
-            ->latest('tgl_order')
-            ->paginate(20);
+        return view('rad.index');
+    }
 
-        return view('rad.index', compact('orders'));
+    public function data(Request $request): JsonResponse
+    {
+        $sort = $request->input('sort');
+        $order = strtolower($request->input('order', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $perPage = min(100, max(5, (int) $request->input('per_page', 20)));
+        $q = trim((string) $request->input('q', ''));
+
+        $query = OrderRadiologi::query()
+            ->with(['kunjungan.pasien', 'dokter', 'details.pemeriksaan'])
+            ->when($request->input('status'), fn ($qq, $s) => $qq->where('status', $s))
+            ->when($request->input('prioritas'), fn ($qq, $p) => $qq->where('prioritas', $p))
+            ->when($q !== '', fn ($qq) => $qq->where(function ($x) use ($q) {
+                $x->where('no_order', 'like', "%{$q}%")
+                  ->orWhereHas('kunjungan.pasien', fn($p) => $p->where('nama', 'like', "%{$q}%")
+                      ->orWhere('no_rm', 'like', "%{$q}%"));
+            }));
+
+        if ($sort && in_array($sort, self::SORTABLE, true)) {
+            $query->orderBy($sort, $order);
+        } else {
+            $query->latest('tgl_order');
+        }
+
+        $p = $query->paginate($perPage);
+
+        return response()->json([
+            'data' => $p->getCollection()->map(fn ($o) => [
+                'id' => $o->id,
+                'no_order' => $o->no_order,
+                'tgl_order' => $o->tgl_order?->format('d M Y H:i'),
+                'pasien' => [
+                    'nama' => $o->kunjungan->pasien->nama,
+                    'no_rm' => $o->kunjungan->pasien->no_rm,
+                ],
+                'dokter' => $o->dokter->nama_lengkap,
+                'status' => $o->status?->value,
+                'status_label' => $o->status?->label(),
+                'prioritas' => $o->prioritas?->value,
+                'prioritas_label' => $o->prioritas?->label(),
+                'hamil' => (bool) $o->hamil,
+                'jumlah_pemeriksaan' => $o->details->count(),
+                'url' => route('rad.show', $o),
+            ]),
+            'meta' => [
+                'current_page' => $p->currentPage(),
+                'last_page' => $p->lastPage(),
+                'per_page' => $p->perPage(),
+                'total' => $p->total(),
+                'from' => $p->firstItem(),
+                'to' => $p->lastItem(),
+            ],
+        ]);
     }
 
     /**

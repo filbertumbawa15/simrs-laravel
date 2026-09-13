@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\OrderLab;
 use App\Models\Pembayaran;
 use App\Models\RawatInap;
+use App\Models\RawatJalan;
 use App\Models\Resep;
 use App\Services\PdfService;
 
@@ -16,4 +17,5 @@ class PdfController extends Controller
     public function kuitansi(Pembayaran $pembayaran) { return $this->pdf->kuitansi($pembayaran); }
     public function resumeMedis(RawatInap $ri) { return $this->pdf->resumeMedis($ri); }
     public function hasilLab(OrderLab $order) { return $this->pdf->hasilLab($order); }
+    public function tiketAntrian(RawatJalan $rj) { return $this->pdf->tiketAntrian($rj); }
 }

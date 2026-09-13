@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\HasUuid;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -14,7 +15,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasUuid, HasRoles, LogsActivity, Notifiable, SoftDeletes;
+    use HasFactory, HasUuid, HasRoles, LogsActivity, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'username',

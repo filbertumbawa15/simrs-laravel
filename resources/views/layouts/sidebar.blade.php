@@ -25,7 +25,7 @@
             </div>
             <div>
                 <div class="font-bold text-lg leading-tight">SIHRS</div>
-                <div class="text-xs text-primary-200 truncate">{{ config('app.rs.nama') }}</div>
+                <div class="text-xs text-primary-200 truncate">{{ config('sihrs.rs_nama') }}</div>
             </div>
         </a>
     </div>
@@ -97,6 +97,25 @@
                 </div>
             @endif
         @endforeach
+
+        {{-- COMPLIANCE — hanya AUDITOR & SUPER_ADMIN --}}
+        @if ($user->hasAnyRole(['AUDITOR', 'SUPER_ADMIN']))
+            <div>
+                <div class="text-[10px] uppercase tracking-wider text-primary-300 font-bold px-3 mb-1">
+                    KEPATUHAN
+                </div>
+                @php $active = str_starts_with($current, 'audit-log'); @endphp
+                <a href="{{ route('audit-log.index') }}"
+                   class="flex items-center gap-3 px-3 py-2 rounded-lg transition
+                          {{ $active ? 'bg-primary-700 text-white font-semibold' : 'text-primary-100 hover:bg-primary-700/50' }}">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                    <span>Audit Log</span>
+                </a>
+            </div>
+        @endif
     </nav>
 
     <div class="px-3 py-3 border-t border-primary-700 text-xs text-primary-200">

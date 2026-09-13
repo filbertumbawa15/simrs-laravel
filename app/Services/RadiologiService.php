@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\PrioritasOrder;
 use App\Enums\StatusKunjungan;
 use App\Enums\StatusOrderRadiologi;
+use App\Mail\HasilRadiologiKritisMail;
 use App\Models\HasilRadiologi;
 use App\Models\HasilRadiologiImage;
 use App\Models\OrderRadiologi;
@@ -13,6 +14,7 @@ use App\Models\PemeriksaanRadiologi;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class RadiologiService
 {
@@ -217,10 +219,19 @@ class RadiologiService
 
     protected function notifyKritis(OrderRadiologi $order): void
     {
-        $kritis = $order->hasil()->where('ada_temuan_kritis', true)->get();
-        foreach ($kritis as $h) {
-            if ($h->critical_notified) continue;
+        $order->load(['kunjungan.pasien', 'dokter']);
 
+        $kritis = $order->hasil()
+            ->with('pemeriksaan')
+            ->where('ada_temuan_kritis', true)
+            ->where('critical_notified', false)
+            ->get();
+
+        if ($kritis->isEmpty()) {
+            return;
+        }
+
+        foreach ($kritis as $h) {
             $h->update([
                 'critical_notified' => true,
                 'critical_notified_at' => now(),
@@ -234,8 +245,15 @@ class RadiologiService
                 'kesan' => $h->kesan,
                 'dpjp' => $order->dokter->nama_lengkap,
             ]);
+        }
 
-            // TODO: dispatch WA/SMS job
+        $email = $order->dokter->email;
+        if ($email) {
+            $mail = Mail::to($email);
+            if ($cc = config('sihrs.kritis_cc')) {
+                $mail->cc($cc);
+            }
+            $mail->queue(new HasilRadiologiKritisMail($order, $kritis));
         }
     }
 }

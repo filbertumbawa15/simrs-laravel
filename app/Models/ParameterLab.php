@@ -4,12 +4,13 @@ namespace App\Models;
 
 use App\Enums\FlagHasilLab;
 use App\Models\Concerns\HasUuid;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class ParameterLab extends Model
 {
-    use HasUuid;
+    use HasFactory, HasUuid;
 
     protected $table = 'parameter_lab';
 

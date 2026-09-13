@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUuid;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Tindakan extends Model
 {
-    use HasUuid;
+    use HasFactory, HasUuid;
 
     protected $table = 'tindakan';
 

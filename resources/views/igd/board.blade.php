@@ -5,6 +5,10 @@
 @section('page-title', 'IGD Board')
 @section('page-subtitle', 'Antrian pasien diurutkan prioritas triase')
 
+@section('page-actions')
+    <x-auto-refresh :seconds="15" />
+@endsection
+
 @section('content')
 
 {{-- Legend kategori triase --}}

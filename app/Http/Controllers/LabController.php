@@ -8,26 +8,75 @@ use App\Models\Kunjungan;
 use App\Models\OrderLab;
 use App\Models\ParameterLab;
 use App\Services\LabService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class LabController extends Controller
 {
+    private const SORTABLE = ['no_order', 'tgl_order', 'status', 'prioritas'];
+
     public function __construct(protected LabService $service) {}
 
     /**
      * Worklist analis lab: order yang perlu diproses.
      */
-    public function index(Request $request): View
+    public function index(): View
     {
-        $orders = OrderLab::query()
-            ->with(['kunjungan.pasien', 'dokter', 'details.parameter'])
-            ->when($request->input('status'), fn ($q, $s) => $q->where('status', $s))
-            ->when($request->input('prioritas'), fn ($q, $p) => $q->where('prioritas', $p))
-            ->latest('tgl_order')
-            ->paginate(20);
+        return view('lab.index');
+    }
 
-        return view('lab.index', compact('orders'));
+    public function data(Request $request): JsonResponse
+    {
+        $sort = $request->input('sort');
+        $order = strtolower($request->input('order', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $perPage = min(100, max(5, (int) $request->input('per_page', 20)));
+        $q = trim((string) $request->input('q', ''));
+
+        $query = OrderLab::query()
+            ->with(['kunjungan.pasien', 'dokter', 'details.parameter'])
+            ->when($request->input('status'), fn ($qq, $s) => $qq->where('status', $s))
+            ->when($request->input('prioritas'), fn ($qq, $p) => $qq->where('prioritas', $p))
+            ->when($q !== '', fn ($qq) => $qq->where(function ($x) use ($q) {
+                $x->where('no_order', 'like', "%{$q}%")
+                  ->orWhereHas('kunjungan.pasien', fn($p) => $p->where('nama', 'like', "%{$q}%")
+                      ->orWhere('no_rm', 'like', "%{$q}%"));
+            }));
+
+        if ($sort && in_array($sort, self::SORTABLE, true)) {
+            $query->orderBy($sort, $order);
+        } else {
+            $query->latest('tgl_order');
+        }
+
+        $p = $query->paginate($perPage);
+
+        return response()->json([
+            'data' => $p->getCollection()->map(fn ($o) => [
+                'id' => $o->id,
+                'no_order' => $o->no_order,
+                'tgl_order' => $o->tgl_order?->format('d M Y H:i'),
+                'pasien' => [
+                    'nama' => $o->kunjungan->pasien->nama,
+                    'no_rm' => $o->kunjungan->pasien->no_rm,
+                ],
+                'dokter' => $o->dokter->nama_lengkap,
+                'status' => $o->status?->value,
+                'status_label' => $o->status?->label(),
+                'prioritas' => $o->prioritas?->value,
+                'prioritas_label' => $o->prioritas?->label(),
+                'jumlah_parameter' => $o->details->count(),
+                'url' => route('lab.show', $o),
+            ]),
+            'meta' => [
+                'current_page' => $p->currentPage(),
+                'last_page' => $p->lastPage(),
+                'per_page' => $p->perPage(),
+                'total' => $p->total(),
+                'from' => $p->firstItem(),
+                'to' => $p->lastItem(),
+            ],
+        ]);
     }
 
     /**

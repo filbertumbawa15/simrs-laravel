@@ -7,85 +7,89 @@
 
 @section('content')
 
-<div class="card">
-    <div class="card-body border-b border-gray-200">
-        <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div>
-                <label class="label text-xs">Tanggal</label>
-                <input type="date" name="tanggal" value="{{ request('tanggal') }}" class="input">
-            </div>
-            <div>
-                <label class="label text-xs">Tipe</label>
-                <select name="tipe" class="select">
-                    <option value="">Semua tipe</option>
-                    <option value="RJ" @selected(request('tipe')==='RJ' )>Rawat Jalan</option>
-                    <option value="RI" @selected(request('tipe')==='RI' )>Rawat Inap</option>
-                    <option value="IGD" @selected(request('tipe')==='IGD' )>IGD</option>
-                </select>
-            </div>
-            <div>
-                <label class="label text-xs">Status</label>
-                <select name="status" class="select">
-                    <option value="">Semua status</option>
-                    @foreach (\App\Enums\StatusKunjungan::cases() as $s)
-                    <option value="{{ $s->value }}" @selected(request('status')===$s->value)>{{ $s->label() }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="flex items-end gap-2">
-                <button class="btn-primary">Filter</button>
-                <a href="{{ route('kunjungan.index') }}" class="btn-secondary">Reset</a>
-            </div>
-        </form>
-    </div>
+<div x-data="dataTable({
+        endpoint: '{{ route('kunjungan.data') }}',
+        storageKey: 'sihrs.kunjungan',
+        defaults: { sortBy: 'tgl_masuk', sortOrder: 'desc', perPage: 20 },
+        filters: { tipe: '', status: '', tanggal: '' },
+     })"
+     x-init="load()"
+     class="card">
+
+    <x-datatable-controls searchPlaceholder="Cari no. kunjungan, nama pasien, No. RM, NIK…">
+        <input type="date" x-model="filters.tanggal" @change="onFilter()" class="input w-auto">
+        <select x-model="filters.tipe" @change="onFilter()" class="select w-auto">
+            <option value="">Semua tipe</option>
+            <option value="RJ">Rawat Jalan</option>
+            <option value="RI">Rawat Inap</option>
+            <option value="IGD">IGD</option>
+        </select>
+        <select x-model="filters.status" @change="onFilter()" class="select w-auto">
+            <option value="">Semua status</option>
+            @foreach (\App\Enums\StatusKunjungan::cases() as $s)
+                <option value="{{ $s->value }}">{{ $s->label() }}</option>
+            @endforeach
+        </select>
+    </x-datatable-controls>
 
     <div class="overflow-x-auto">
         <table class="table">
             <thead>
                 <tr>
-                    <th>No. Kunjungan</th>
-                    <th>Tanggal</th>
+                    <th @click="toggleSort('no_kunjungan')" class="cursor-pointer select-none hover:bg-gray-100">
+                        No. Kunjungan <span class="ml-1 text-gray-400 text-xs" x-text="sortIcon('no_kunjungan')" :class="sortBy==='no_kunjungan' ? 'text-primary-700 font-bold' : ''"></span>
+                    </th>
+                    <th @click="toggleSort('tgl_masuk')" class="cursor-pointer select-none hover:bg-gray-100">
+                        Tanggal <span class="ml-1 text-gray-400 text-xs" x-text="sortIcon('tgl_masuk')" :class="sortBy==='tgl_masuk' ? 'text-primary-700 font-bold' : ''"></span>
+                    </th>
                     <th>Pasien</th>
-                    <th>Tipe</th>
-                    <th>Poli / Tujuan</th>
-                    <th>Penjamin</th>
-                    <th>Status</th>
+                    <th @click="toggleSort('tipe')" class="cursor-pointer select-none hover:bg-gray-100">
+                        Tipe <span class="ml-1 text-gray-400 text-xs" x-text="sortIcon('tipe')" :class="sortBy==='tipe' ? 'text-primary-700 font-bold' : ''"></span>
+                    </th>
+                    <th>Poli / Dokter</th>
+                    <th @click="toggleSort('penjamin')" class="cursor-pointer select-none hover:bg-gray-100">
+                        Penjamin <span class="ml-1 text-gray-400 text-xs" x-text="sortIcon('penjamin')" :class="sortBy==='penjamin' ? 'text-primary-700 font-bold' : ''"></span>
+                    </th>
+                    <th @click="toggleSort('status')" class="cursor-pointer select-none hover:bg-gray-100">
+                        Status <span class="ml-1 text-gray-400 text-xs" x-text="sortIcon('status')" :class="sortBy==='status' ? 'text-primary-700 font-bold' : ''"></span>
+                    </th>
                     <th class="text-right">Aksi</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse ($kunjungan as $kj)
-                <tr>
-                    <td class="font-mono text-xs">
-                        <a href="{{ route('kunjungan.show', $kj) }}" class="text-primary-600 hover:underline">
-                            {{ $kj->no_kunjungan }}
-                        </a>
-                    </td>
-                    <td>{{ $kj->tgl_masuk->format('d M Y H:i') }}</td>
-                    <td>
-                        <div class="font-medium">{{ $kj->pasien->nama }}</div>
-                        <div class="text-xs text-gray-500">{{ $kj->pasien->no_rm }}</div>
-                    </td>
-                    <td><span class="badge {{ $kj->tipe->badge() }}">{{ $kj->tipe->label() }}</span></td>
-                    <td class="text-xs">{{ $kj->rawatJalan?->poli?->nama ?? '—' }}</td>
-                    <td><span class="badge badge-gray text-xs">{{ $kj->penjamin->label() }}</span></td>
-                    <td><span class="badge badge-yellow">{{ $kj->status->label() }}</span></td>
-                    <td class="text-right">
-                        <a href="{{ route('kunjungan.show', $kj) }}" class="btn-secondary btn-sm">Detail</a>
-                    </td>
+                <template x-for="k in data" :key="k.id">
+                    <tr>
+                        <td class="font-mono text-xs">
+                            <a :href="k.url" class="text-primary-600 hover:underline" x-text="k.no_kunjungan"></a>
+                        </td>
+                        <td class="text-xs" x-text="k.tgl_masuk"></td>
+                        <td>
+                            <div class="font-medium" x-text="k.pasien.nama"></div>
+                            <div class="text-xs text-gray-500" x-text="`${k.pasien.no_rm} · ${k.pasien.jenis_kelamin} · ${k.pasien.umur} thn`"></div>
+                        </td>
+                        <td><span class="badge badge-teal text-xs" x-text="k.tipe_label"></span></td>
+                        <td class="text-xs">
+                            <div x-text="k.poli || '—'"></div>
+                            <div class="text-gray-500" x-text="k.dokter || ''"></div>
+                        </td>
+                        <td><span class="badge badge-gray text-xs" x-text="k.penjamin_label"></span></td>
+                        <td><span class="badge badge-yellow text-xs" x-text="k.status_label"></span></td>
+                        <td class="text-right">
+                            <a :href="k.url" class="btn-secondary btn-sm">Detail</a>
+                        </td>
+                    </tr>
+                </template>
+                <tr x-show="!loading && data.length === 0">
+                    <td colspan="8" class="text-center py-12 text-gray-400">Tidak ada data kunjungan yang cocok.</td>
                 </tr>
-                @empty
-                <tr>
-                    <td colspan="8" class="text-center py-12 text-gray-400">Tidak ada data kunjungan</td>
+                <tr x-show="loading && data.length === 0">
+                    <td colspan="8" class="text-center py-12 text-gray-400">Memuat data…</td>
                 </tr>
-                @endforelse
             </tbody>
         </table>
     </div>
 
-    @if ($kunjungan->hasPages())
-    <div class="card-footer">{{ $kunjungan->links() }}</div>
-    @endif
+    @include('partials.datatable-pagination')
 </div>
 
 @endsection

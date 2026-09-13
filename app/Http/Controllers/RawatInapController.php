@@ -9,27 +9,73 @@ use App\Models\KelasKamar;
 use App\Models\Kunjungan;
 use App\Models\RawatInap;
 use App\Services\RawatInapService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class RawatInapController extends Controller
 {
+    private const SORTABLE = ['tgl_masuk_ri', 'tgl_pulang', 'cara_pulang'];
+
     public function __construct(protected RawatInapService $service) {}
 
     /**
      * Daftar pasien rawat inap aktif.
      */
-    public function index(Request $request): View
+    public function index(): View
     {
-        $ri = RawatInap::query()
-            ->with(['kunjungan.pasien', 'dpjp', 'kamarAktif.kamar.kelas'])
-            ->when($request->input('status') === 'aktif', fn ($q) => $q->whereNull('tgl_pulang'))
-            ->when($request->input('status') === 'pulang', fn ($q) => $q->whereNotNull('tgl_pulang'))
-            ->when(! $request->input('status'), fn ($q) => $q->whereNull('tgl_pulang'))
-            ->latest('tgl_masuk_ri')
-            ->paginate(20);
+        return view('ri.index');
+    }
 
-        return view('ri.index', compact('ri'));
+    public function data(Request $request): JsonResponse
+    {
+        $sort = $request->input('sort');
+        $order = strtolower($request->input('order', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $perPage = min(100, max(5, (int) $request->input('per_page', 20)));
+        $q = trim((string) $request->input('q', ''));
+        $status = $request->input('status', 'aktif');
+
+        $query = RawatInap::query()
+            ->with(['kunjungan.pasien', 'dpjp', 'kamarAktif.kamar.kelas'])
+            ->when($status === 'aktif', fn ($qq) => $qq->whereNull('tgl_pulang'))
+            ->when($status === 'pulang', fn ($qq) => $qq->whereNotNull('tgl_pulang'))
+            ->when($q !== '', fn ($qq) => $qq->whereHas('kunjungan.pasien', fn($p) =>
+                $p->where('nama', 'like', "%{$q}%")->orWhere('no_rm', 'like', "%{$q}%")
+            ));
+
+        if ($sort && in_array($sort, self::SORTABLE, true)) {
+            $query->orderBy($sort, $order);
+        } else {
+            $query->latest('tgl_masuk_ri');
+        }
+
+        $p = $query->paginate($perPage);
+
+        return response()->json([
+            'data' => $p->getCollection()->map(fn ($ri) => [
+                'id' => $ri->id,
+                'tgl_masuk_ri' => $ri->tgl_masuk_ri?->format('d M Y H:i'),
+                'tgl_pulang' => $ri->tgl_pulang?->format('d M Y H:i'),
+                'pasien' => [
+                    'nama' => $ri->kunjungan->pasien->nama,
+                    'no_rm' => $ri->kunjungan->pasien->no_rm,
+                    'umur' => $ri->kunjungan->pasien->umur,
+                ],
+                'kamar' => $ri->kamarAktif?->kamar?->no_kamar,
+                'kelas' => $ri->kamarAktif?->kamar?->kelas?->nama,
+                'dpjp' => $ri->dpjp->nama_lengkap,
+                'cara_pulang' => $ri->cara_pulang,
+                'url' => route('ri.show', $ri),
+            ]),
+            'meta' => [
+                'current_page' => $p->currentPage(),
+                'last_page' => $p->lastPage(),
+                'per_page' => $p->perPage(),
+                'total' => $p->total(),
+                'from' => $p->firstItem(),
+                'to' => $p->lastItem(),
+            ],
+        ]);
     }
 
     /**

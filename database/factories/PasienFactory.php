@@ -131,6 +131,7 @@ class PasienFactory extends Factory
         ]);
 
         return [
+            'no_rm' => str_pad((string) fake()->unique()->numberBetween(100000, 999999), 6, '0', STR_PAD_LEFT),
             'nik' => $nik,
             'nama' => "{$namaDepan} {$namaBelakang}",
             'tempat_lahir' => $kota,

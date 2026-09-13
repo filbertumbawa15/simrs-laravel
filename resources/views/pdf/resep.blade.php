@@ -40,7 +40,7 @@
     <div class="ttd-grid">
         <div class="ttd-cell"></div>
         <div class="ttd-cell">
-            {{ config('app.rs.alamat') }}, {{ now()->translatedFormat('d F Y') }}<br>
+            {{ config('sihrs.rs_alamat') }}, {{ now()->translatedFormat('d F Y') }}<br>
             Dokter,
             <div style="height:55px"></div>
             <strong>{{ $resep->dokter->nama_lengkap }}</strong><br>

@@ -7,68 +7,82 @@
 
 @section('content')
 
-<div class="card">
-    <div class="card-body border-b border-gray-200">
-        <form method="GET" class="flex gap-3">
-            <select name="status" class="select" onchange="this.form.submit()">
-                <option value="">Semua status</option>
-                <option value="BARU" @selected(request('status') === 'BARU')>Baru (perlu verifikasi)</option>
-                <option value="DIVERIFIKASI" @selected(request('status') === 'DIVERIFIKASI')>Diverifikasi (siap diserahkan)</option>
-                <option value="DISERAHKAN" @selected(request('status') === 'DISERAHKAN')>Sudah diserahkan</option>
-            </select>
-            @if (request('status'))<a href="{{ route('resep.index') }}" class="btn-secondary">Reset</a>@endif
-        </form>
-    </div>
+<div x-data="dataTable({
+        endpoint: '{{ route('resep.data') }}',
+        storageKey: 'sihrs.resep',
+        defaults: { sortBy: 'tgl_resep', sortOrder: 'desc', perPage: 20 },
+        filters: { status: '' },
+     })"
+     x-init="load()"
+     class="card">
+
+    <x-datatable-controls searchPlaceholder="Cari no. resep, nama pasien, No. RM…">
+        <select x-model="filters.status" @change="onFilter()" class="select w-auto">
+            <option value="">Semua status</option>
+            <option value="BARU">Baru (perlu verifikasi)</option>
+            <option value="DIVERIFIKASI">Diverifikasi (siap diserahkan)</option>
+            <option value="DISERAHKAN">Sudah diserahkan</option>
+        </select>
+    </x-datatable-controls>
 
     <div class="overflow-x-auto">
         <table class="table">
             <thead>
                 <tr>
-                    <th>No. Resep</th>
-                    <th>Tanggal</th>
+                    <th @click="toggleSort('no_resep')" class="cursor-pointer select-none hover:bg-gray-100">
+                        No. Resep <span class="ml-1 text-gray-400 text-xs" x-text="sortIcon('no_resep')" :class="sortBy==='no_resep' ? 'text-primary-700 font-bold' : ''"></span>
+                    </th>
+                    <th @click="toggleSort('tgl_resep')" class="cursor-pointer select-none hover:bg-gray-100">
+                        Tanggal <span class="ml-1 text-gray-400 text-xs" x-text="sortIcon('tgl_resep')" :class="sortBy==='tgl_resep' ? 'text-primary-700 font-bold' : ''"></span>
+                    </th>
                     <th>Pasien</th>
                     <th>Dokter</th>
                     <th>Item</th>
-                    <th>Status</th>
+                    <th @click="toggleSort('status')" class="cursor-pointer select-none hover:bg-gray-100">
+                        Status <span class="ml-1 text-gray-400 text-xs" x-text="sortIcon('status')" :class="sortBy==='status' ? 'text-primary-700 font-bold' : ''"></span>
+                    </th>
                     <th class="text-right">Aksi</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse ($resep as $r)
+                <template x-for="r in data" :key="r.id">
                     <tr>
                         <td class="font-mono text-xs">
-                            <a href="{{ route('resep.show', $r) }}" class="text-primary-600 hover:underline">{{ $r->no_resep }}</a>
+                            <a :href="r.url" class="text-primary-600 hover:underline" x-text="r.no_resep"></a>
                         </td>
-                        <td class="text-xs">{{ $r->tgl_resep->format('d M Y H:i') }}</td>
+                        <td class="text-xs" x-text="r.tgl_resep"></td>
                         <td>
-                            <div class="font-medium">{{ $r->kunjungan->pasien->nama }}</div>
-                            <div class="text-xs text-gray-500">{{ $r->kunjungan->pasien->no_rm }}</div>
+                            <div class="font-medium" x-text="r.pasien.nama"></div>
+                            <div class="text-xs text-gray-500" x-text="r.pasien.no_rm"></div>
                         </td>
-                        <td class="text-sm">{{ $r->dokter->nama_lengkap }}</td>
-                        <td class="text-sm">{{ $r->details->count() }} item</td>
+                        <td class="text-sm" x-text="r.dokter"></td>
+                        <td class="text-sm" x-text="`${r.jumlah_item} item`"></td>
                         <td>
-                            @php
-                                $color = match($r->status) {
-                                    'BARU' => 'yellow',
-                                    'DIVERIFIKASI' => 'blue',
-                                    'DISERAHKAN' => 'green',
-                                    default => 'gray',
-                                };
-                            @endphp
-                            <span class="badge badge-{{ $color }}">{{ $r->status }}</span>
+                            <span class="badge text-xs"
+                                  :class="{
+                                      'badge-yellow': r.status === 'BARU',
+                                      'badge-blue': r.status === 'DIVERIFIKASI',
+                                      'badge-green': r.status === 'DISERAHKAN',
+                                      'badge-gray': !['BARU','DIVERIFIKASI','DISERAHKAN'].includes(r.status),
+                                  }"
+                                  x-text="r.status"></span>
                         </td>
                         <td class="text-right">
-                            <a href="{{ route('resep.show', $r) }}" class="btn-secondary btn-sm">Proses</a>
+                            <a :href="r.url" class="btn-secondary btn-sm">Proses</a>
                         </td>
                     </tr>
-                @empty
-                    <tr><td colspan="7" class="text-center py-12 text-gray-400">Tidak ada resep</td></tr>
-                @endforelse
+                </template>
+                <tr x-show="!loading && data.length === 0">
+                    <td colspan="7" class="text-center py-12 text-gray-400">Tidak ada resep.</td>
+                </tr>
+                <tr x-show="loading && data.length === 0">
+                    <td colspan="7" class="text-center py-12 text-gray-400">Memuat data…</td>
+                </tr>
             </tbody>
         </table>
     </div>
 
-    @if ($resep->hasPages())<div class="card-footer">{{ $resep->links() }}</div>@endif
+    @include('partials.datatable-pagination')
 </div>
 
 @endsection

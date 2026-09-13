@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HealthCheckController;
 use App\Http\Controllers\IgdController;
 use App\Http\Controllers\KamarController;
 use App\Http\Controllers\KunjunganController;
@@ -15,9 +16,16 @@ use App\Http\Controllers\RawatJalanController;
 use App\Http\Controllers\ResepController;
 use Illuminate\Support\Facades\Route;
 
+// Public health check — TIDAK perlu auth, dipakai monitoring uptime.
+// /up = default Laravel (200 blank). /up/health = detail per komponen.
+Route::get('up/health', HealthCheckController::class)->name('health');
+
+// Public — verifikasi dokumen via QR scan. Tidak expose PHI, cukup "sah/tidak".
+Route::get('verify/{docType}/{docId}', [\App\Http\Controllers\VerifyController::class, 'show'])->name('verify');
+
 Route::middleware('guest')->group(function () {
     Route::get('login', [AuthenticatedSessionController::class, 'create'])->name('login');
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
+    Route::post('login', [AuthenticatedSessionController::class, 'store'])->middleware('throttle:login');
 });
 
 Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
@@ -28,22 +36,32 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-    // --- Pasien ---
-    Route::resource('pasien', PasienController::class);
+    // --- Pasien --- (store/update di-throttle: anti double-submit / bot)
+    Route::controller(PasienController::class)->prefix('pasien')->name('pasien.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('data', 'data')->name('data'); // JSON endpoint untuk Alpine dataTable
+        Route::get('create', 'create')->name('create');
+        Route::post('/', 'store')->name('store')->middleware('throttle:write');
+        Route::get('{pasien}', 'show')->name('show');
+        Route::get('{pasien}/edit', 'edit')->name('edit');
+        Route::put('{pasien}', 'update')->name('update')->middleware('throttle:write');
+        Route::delete('{pasien}', 'destroy')->name('destroy');
+    });
 
     // --- Kunjungan ---
     Route::controller(KunjunganController::class)->prefix('kunjungan')->name('kunjungan.')->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('data', 'data')->name('data');
         Route::get('create', 'create')->name('create');
-        Route::post('/', 'store')->name('store');
+        Route::post('/', 'store')->name('store')->middleware('throttle:write');
         Route::get('{kunjungan}', 'show')->name('show');
         Route::post('{kunjungan}/batal', 'batal')->name('batal');
     });
 
-    // --- Rawat Jalan ---
+    // --- Rawat Jalan --- (search endpoint di-throttle: autocomplete rate)
     Route::controller(RawatJalanController::class)->prefix('rj')->name('rj.')->group(function () {
         Route::get('antrian', 'antrian')->name('antrian');
-        Route::get('icd/search', 'searchIcd')->name('icd.search');
+        Route::get('icd/search', 'searchIcd')->name('icd.search')->middleware('throttle:search');
         Route::get('{rj}', 'show')->name('show');
         Route::post('{rj}/panggil', 'panggil')->name('panggil');
         Route::get('{rj}/periksa', 'periksa')->name('periksa');
@@ -54,9 +72,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     // --- Resep / Farmasi ---
     Route::controller(ResepController::class)->prefix('resep')->name('resep.')->group(function () {
         Route::get('/', 'index')->name('index');
-        Route::get('obat/search', 'searchObat')->name('obat.search');
+        Route::get('data', 'data')->name('data');
+        Route::get('obat/search', 'searchObat')->name('obat.search')->middleware('throttle:search');
         Route::get('create', 'create')->name('create');
-        Route::post('/', 'store')->name('store');
+        Route::post('/', 'store')->name('store')->middleware('throttle:write');
         Route::get('{resep}', 'show')->name('show');
         Route::post('{resep}/verifikasi', 'verifikasi')->name('verifikasi');
         Route::post('{resep}/serahkan', 'serahkan')->name('serahkan');
@@ -65,6 +84,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     // --- Billing ---
     Route::controller(BillingController::class)->prefix('billing')->name('billing.')->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('data', 'data')->name('data');
         Route::post('generate/{kunjungan}', 'generate')->name('generate');
         Route::get('{tagihan}', 'show')->name('show');
         Route::post('{tagihan}/finalize', 'finalize')->name('finalize');
@@ -74,6 +94,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::controller(LabController::class)->prefix('lab')->name('lab.')->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('data', 'data')->name('data');
         Route::get('create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
         Route::get('{order}', 'show')->name('show');
@@ -86,6 +107,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::controller(RawatInapController::class)->prefix('ri')->name('ri.')->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('data', 'data')->name('data');
         Route::get('admisi', 'admisiForm')->name('admisi.form');
         Route::post('admisi', 'admisiStore')->name('admisi.store');
         Route::get('{ri}', 'show')->name('show');
@@ -112,15 +134,33 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/meninggal/{kunjungan}', 'meninggal')->name('meninggal.store');
     });
 
+    // Audit log — read-only viewer, hanya AUDITOR & SUPER_ADMIN.
+    Route::middleware('role:AUDITOR|SUPER_ADMIN')->group(function () {
+        Route::get('audit-log', [\App\Http\Controllers\AuditLogController::class, 'index'])->name('audit-log.index');
+        Route::get('audit-log/data', [\App\Http\Controllers\AuditLogController::class, 'data'])->name('audit-log.data');
+    });
+
+    // Excel export
+    Route::prefix('export')->name('export.')->group(function () {
+        Route::get('pasien', [\App\Http\Controllers\ExportController::class, 'pasien'])
+            ->middleware('role:MANAGER|DIREKSI|AUDITOR|SUPER_ADMIN')
+            ->name('pasien');
+        Route::get('tagihan', [\App\Http\Controllers\ExportController::class, 'rekapTagihan'])
+            ->middleware('role:MANAGER|DIREKSI|AUDITOR|KASIR_SUPERVISOR|SUPER_ADMIN')
+            ->name('tagihan');
+    });
+
     Route::controller(PdfController::class)->prefix('pdf')->name('pdf.')->group(function () {
         Route::get('resep/{resep}', 'resep')->name('resep');
         Route::get('kuitansi/{pembayaran}', 'kuitansi')->name('kuitansi');
         Route::get('resume-medis/{ri}', 'resumeMedis')->name('resume');
         Route::get('hasil-lab/{order}', 'hasilLab')->name('hasil-lab');
+        Route::get('tiket/{rj}', 'tiketAntrian')->name('tiket');
     });
 
     Route::controller(RadiologiController::class)->prefix('rad')->name('rad.')->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('data', 'data')->name('data');
         Route::get('create', 'create')->name('create');
         Route::post('/', 'store')->name('store');
         Route::get('{order}', 'show')->name('show');

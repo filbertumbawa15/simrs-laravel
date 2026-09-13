@@ -58,7 +58,7 @@ Keterangan flag: <span class="flag-N">N</span>=Normal · <span class="flag-L">L<
     <div class="ttd-grid">
         <div class="ttd-cell"></div>
         <div class="ttd-cell">
-            {{ config('app.rs.alamat') }}, {{ $order->validated_at->translatedFormat('d F Y') }}<br>
+            {{ config('sihrs.rs_alamat') }}, {{ $order->validated_at->translatedFormat('d F Y') }}<br>
             Divalidasi oleh,
             <div style="height:55px"></div>
             <strong>{{ $order->validator->name }}</strong><br>

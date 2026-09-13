@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -42,7 +43,9 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index(['nama', 'tgl_lahir']);
-            $table->fullText(['nama', 'no_rm', 'nik']);
+            if (in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'])) {
+                $table->fullText(['nama', 'no_rm', 'nik']);
+            }
         });
 
         Schema::create('rekam_medis', function (Blueprint $table) {

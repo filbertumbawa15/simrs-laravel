@@ -6,6 +6,7 @@ use App\Enums\FlagHasilLab;
 use App\Enums\PrioritasOrder;
 use App\Enums\StatusKunjungan;
 use App\Enums\StatusOrderLab;
+use App\Mail\HasilLabKritisMail;
 use App\Models\HasilLab;
 use App\Models\Kunjungan;
 use App\Models\OrderLab;
@@ -13,6 +14,7 @@ use App\Models\OrderLabDetail;
 use App\Models\ParameterLab;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class LabService
 {
@@ -210,24 +212,32 @@ class LabService
 
     /**
      * Trigger notifikasi nilai kritis ke DPJP / dokter perujuk.
-     * Production: kirim WA, SMS, atau push notif.
+     * - Log ke audit channel (retensi 5 tahun)
+     * - Kirim email queued kalau dokter punya email
+     * - Idempotent via critical_notified flag
      */
     protected function notifyKritis(OrderLab $order): void
     {
-        $kritis = $order->hasil()->whereIn('flag', ['LL', 'HH'])->get();
+        $order->load(['kunjungan.pasien', 'dokter']);
 
+        // Ambil hasil kritis yang belum dinotifikasi
+        $kritis = $order->hasil()
+            ->with('parameter')
+            ->whereIn('flag', ['LL', 'HH'])
+            ->where('critical_notified', false)
+            ->get();
+
+        if ($kritis->isEmpty()) {
+            return;
+        }
+
+        // Tandai + log per hasil untuk audit trail
         foreach ($kritis as $hasil) {
-            // Tandai sudah dinotifikasi (idempotent)
-            if ($hasil->critical_notified) {
-                continue;
-            }
-
             $hasil->update([
                 'critical_notified' => true,
                 'critical_notified_at' => now(),
             ]);
 
-            // Log untuk audit
             Log::channel('audit')->warning('Nilai kritis lab', [
                 'order' => $order->no_order,
                 'pasien' => $order->kunjungan->pasien->nama,
@@ -237,9 +247,16 @@ class LabService
                 'flag' => $hasil->flag->value,
                 'dpjp' => $order->dokter->nama_lengkap,
             ]);
+        }
 
-            // TODO production: dispatch job kirim WA/SMS ke dokter
-            // NotifyKritisJob::dispatch($hasil)->onQueue('notifications');
+        // Kirim satu email per order (bukan per hasil) supaya inbox dokter tidak spam
+        $email = $order->dokter->email;
+        if ($email) {
+            $mail = Mail::to($email);
+            if ($cc = config('sihrs.kritis_cc')) {
+                $mail->cc($cc);
+            }
+            $mail->queue(new HasilLabKritisMail($order, $kritis));
         }
     }
 }

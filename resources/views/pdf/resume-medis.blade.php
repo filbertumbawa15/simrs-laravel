@@ -55,7 +55,7 @@
             <strong>(.......................................)</strong>
         </div>
         <div class="ttd-cell">
-            {{ config('app.rs.alamat') }}, {{ $ri->resume_finalized_at->translatedFormat('d F Y') }}<br>
+            {{ config('sihrs.rs_alamat') }}, {{ $ri->resume_finalized_at->translatedFormat('d F Y') }}<br>
             DPJP,
             <div style="height:55px"></div>
             <strong>{{ $ri->dpjp->nama_lengkap }}</strong><br>

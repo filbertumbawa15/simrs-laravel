@@ -9,6 +9,7 @@ use App\Models\Pasien;
 use App\Models\Poli;
 use App\Services\PendaftaranService;
 use App\Services\RawatJalanService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,23 +17,75 @@ use Illuminate\View\View;
 
 class KunjunganController extends Controller
 {
+    private const SORTABLE = ['no_kunjungan', 'tgl_masuk', 'tipe', 'status', 'penjamin'];
+
     public function __construct(
         protected PendaftaranService $pendaftaran,
         protected RawatJalanService $rj,
     ) {}
 
-    public function index(Request $request): View
+    public function index(): View
     {
-        $kunjungan = Kunjungan::query()
-            ->with(['pasien', 'rawatJalan.poli', 'rawatJalan.dokter'])
-            ->when($request->input('tipe'), fn($q, $t) => $q->where('tipe', $t))
-            ->when($request->input('status'), fn($q, $s) => $q->where('status', $s))
-            ->when($request->input('tanggal'), fn($q, $d) => $q->whereDate('tgl_masuk', $d))
-            ->latest('tgl_masuk')
-            ->paginate(20)
-            ->withQueryString();
+        return view('kunjungan.index');
+    }
 
-        return view('kunjungan.index', compact('kunjungan'));
+    public function data(Request $request): JsonResponse
+    {
+        $sort = $request->input('sort');
+        $order = strtolower($request->input('order', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $perPage = min(100, max(5, (int) $request->input('per_page', 20)));
+        $q = trim((string) $request->input('q', ''));
+
+        $query = Kunjungan::query()
+            ->with(['pasien', 'rawatJalan.poli', 'rawatJalan.dokter'])
+            ->when($request->input('tipe'), fn($qq, $t) => $qq->where('tipe', $t))
+            ->when($request->input('status'), fn($qq, $s) => $qq->where('status', $s))
+            ->when($request->input('tanggal'), fn($qq, $d) => $qq->whereDate('tgl_masuk', $d))
+            ->when($q !== '', fn($qq) => $qq->where(function ($x) use ($q) {
+                $x->where('no_kunjungan', 'like', "%{$q}%")
+                  ->orWhereHas('pasien', fn($p) => $p->where('nama', 'like', "%{$q}%")
+                      ->orWhere('no_rm', 'like', "%{$q}%")
+                      ->orWhere('nik', 'like', "%{$q}%"));
+            }));
+
+        if ($sort && in_array($sort, self::SORTABLE, true)) {
+            $query->orderBy($sort, $order);
+        } else {
+            $query->latest('tgl_masuk');
+        }
+
+        $p = $query->paginate($perPage);
+
+        return response()->json([
+            'data' => $p->getCollection()->map(fn ($k) => [
+                'id' => $k->id,
+                'no_kunjungan' => $k->no_kunjungan,
+                'tipe' => $k->tipe?->value,
+                'tipe_label' => $k->tipe?->label(),
+                'status' => $k->status?->value,
+                'status_label' => $k->status?->label(),
+                'penjamin' => $k->penjamin?->value,
+                'penjamin_label' => $k->penjamin?->label(),
+                'tgl_masuk' => $k->tgl_masuk?->format('d M Y H:i'),
+                'pasien' => [
+                    'nama' => $k->pasien->nama,
+                    'no_rm' => $k->pasien->no_rm,
+                    'jenis_kelamin' => $k->pasien->jenis_kelamin?->label(),
+                    'umur' => $k->pasien->umur,
+                ],
+                'poli' => $k->rawatJalan?->poli?->nama,
+                'dokter' => $k->rawatJalan?->dokter?->nama_lengkap,
+                'url' => route('kunjungan.show', $k),
+            ]),
+            'meta' => [
+                'current_page' => $p->currentPage(),
+                'last_page' => $p->lastPage(),
+                'per_page' => $p->perPage(),
+                'total' => $p->total(),
+                'from' => $p->firstItem(),
+                'to' => $p->lastItem(),
+            ],
+        ]);
     }
 
     public function create(Request $request): View

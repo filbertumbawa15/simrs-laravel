@@ -21,7 +21,7 @@
                 </svg>
             </div>
             <h1 class="text-2xl font-bold">SIHRS</h1>
-            <p class="text-sm text-primary-200">{{ config('app.rs.nama') }}</p>
+            <p class="text-sm text-primary-200">{{ config('sihrs.rs_nama') }}</p>
         </div>
 
         {{-- Login card --}}
@@ -68,7 +68,7 @@
         </div>
 
         <div class="text-center mt-4 text-xs text-primary-200">
-            © {{ date('Y') }} {{ config('app.rs.nama') }} • SIHRS v1.0
+            © {{ date('Y') }} {{ config('sihrs.rs_nama') }} • SIHRS v1.0
         </div>
     </div>
 
