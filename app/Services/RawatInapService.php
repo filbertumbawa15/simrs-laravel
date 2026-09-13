@@ -24,9 +24,10 @@ class RawatInapService
     ): RawatInap {
         return DB::transaction(function () use ($kunjungan, $kamarId, $dpjpId, $alasanMasuk) {
 
-            if ($kunjungan->tipe->value !== 'RI' && $kunjungan->tipe->value !== 'IGD') {
+            // Semua kunjungan aktif (RJ/IGD/RI) bisa di-admisi ke RI, kecuali sudah SELESAI/BATAL
+            if (in_array($kunjungan->status?->value, ['SELESAI', 'BATAL'])) {
                 throw new \DomainException(
-                    'Hanya kunjungan tipe RI atau IGD (yang dilanjutkan ke RI) yang bisa di-admisi.'
+                    "Kunjungan ini sudah {$kunjungan->status->label()}, tidak bisa diadmisikan lagi."
                 );
             }
 
@@ -62,7 +63,7 @@ class RawatInapService
             // Update status kamar
             $kamar->update(['status' => StatusKamar::Terisi]);
 
-            // Update tipe kunjungan (kalau dari IGD) & status
+            // Update tipe kunjungan (RJ/IGD → RI) & status
             $kunjungan->update([
                 'tipe' => 'RI',
                 'status' => StatusKunjungan::DalamPemeriksaan,

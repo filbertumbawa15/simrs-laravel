@@ -99,6 +99,37 @@ $adaTagihan = (bool) $kunjungan->tagihan;
                     </a>
                     @endcan
                     @endif
+
+                    {{-- Disposisi RJ: kalau dokter memutuskan pasien perlu rawat inap --}}
+                    @if (in_array($status, ['DALAM_PEMERIKSAAN', 'MENUNGGU_HASIL_LAB', 'MENUNGGU_OBAT']))
+                    <div class="w-full border-t border-primary-200 pt-3 mt-2">
+                        <div class="text-xs font-semibold text-primary-900 uppercase mb-2">
+                            Disposisi Lanjutan
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            @can('ri.admisi')
+                            @if ($sudahDiagnosa)
+                                <a href="{{ route('ri.admisi.form', ['kunjungan_id' => $kunjungan->id]) }}"
+                                   class="btn-warning">
+                                    🛏 Admisi Rawat Inap
+                                </a>
+                            @else
+                                <button type="button"
+                                    onclick="window.notify.warning('Input diagnosa ICD-10 terlebih dahulu di halaman pemeriksaan, sebelum lanjut admisi rawat inap.', 'Diagnosa Wajib')"
+                                    class="btn-warning opacity-60 cursor-not-allowed">
+                                    🛏 Admisi Rawat Inap
+                                </button>
+                            @endif
+                            @endcan
+                        </div>
+                        @if (! $sudahDiagnosa)
+                        <p class="text-xs text-amber-700 mt-2">
+                            ℹ Diagnosa ICD-10 wajib diisi di halaman <strong>pemeriksaan</strong>
+                            sebelum bisa admisi ke rawat inap.
+                        </p>
+                        @endif
+                    </div>
+                    @endif
                     @endif
 
                     {{-- ========================================
