@@ -16,7 +16,9 @@
 /docs/user-guide/docx-output
 /auth.json
 /node_modules
-/public/build
+# /public/build TIDAK di-ignore — supaya `sudo sihrs-deploy` di VPS bisa langsung pull
+# tanpa perlu install Node/npm + build. Kalau nanti pindah ke CI/CD, uncomment lagi.
+# /public/build
 /public/hot
 /public/storage
 /storage/*.key
