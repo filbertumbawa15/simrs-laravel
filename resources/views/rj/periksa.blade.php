@@ -238,12 +238,9 @@
                     this.results = [];
                     return;
                 }
-                const res = await axios.get('{{ route('
-                    rj.icd.search ') }}', {
-                        params: {
-                            q: this.searchTerm
-                        }
-                    });
+                const res = await axios.get('{{ route('rj.icd.search') }}', {
+                    params: { q: this.searchTerm }
+                });
                 this.results = res.data;
             },
             add(item) {
