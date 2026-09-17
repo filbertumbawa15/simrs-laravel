@@ -167,6 +167,26 @@ class KunjunganController extends Controller
         return view('kunjungan.show', compact('kunjungan'));
     }
 
+    /**
+     * AJAX: list dokter yang punya jadwal di poli tertentu (untuk dropdown reactive).
+     */
+    public function dokterByPoli(Request $request, Poli $poli): JsonResponse
+    {
+        $dokter = Dokter::query()
+            ->whereHas('jadwal', fn ($q) => $q->where('poli_id', $poli->id)->where('is_active', true))
+            ->active()
+            ->orderBy('nama')
+            ->get(['id', 'kode', 'nama', 'gelar_depan', 'gelar_belakang', 'spesialisasi']);
+
+        return response()->json([
+            'data' => $dokter->map(fn ($d) => [
+                'id' => $d->id,
+                'nama_lengkap' => $d->nama_lengkap,
+                'spesialisasi' => $d->spesialisasi,
+            ]),
+        ]);
+    }
+
     public function batal(Kunjungan $kunjungan): RedirectResponse
     {
         $this->authorize('cancel', $kunjungan);

@@ -130,14 +130,18 @@ class Kunjungan extends Model
         $year = now()->format('Y');
         $month = now()->format('m');
 
-        $last = self::where('no_kunjungan', 'like', "{$prefix}/{$year}/{$month}/%")
-            ->orderByDesc('no_kunjungan')
+        // Hanya hitung yang punya suffix numeric 5-digit (skip mis. DEMO2 dari seeder).
+        // Pakai plucked collection + PHP filter — portable ke SQLite (untuk test) & MySQL.
+        $maxSeq = self::where('no_kunjungan', 'like', "{$prefix}/{$year}/{$month}/%")
             ->lockForUpdate()
-            ->first();
+            ->pluck('no_kunjungan')
+            ->map(function ($n) {
+                $suffix = substr($n, -5);
+                return preg_match('/^\d{5}$/', $suffix) ? (int) $suffix : 0;
+            })
+            ->max();
 
-        $seq = $last
-            ? ((int) substr($last->no_kunjungan, -5)) + 1
-            : 1;
+        $seq = ($maxSeq ?? 0) + 1;
 
         return sprintf('%s/%s/%s/%05d', $prefix, $year, $month, $seq);
     }

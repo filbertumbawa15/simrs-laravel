@@ -53,6 +53,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('data', 'data')->name('data');
         Route::get('create', 'create')->name('create');
+        Route::get('dokter-by-poli/{poli}', 'dokterByPoli')->name('dokter-by-poli');
         Route::post('/', 'store')->name('store')->middleware('throttle:write');
         Route::get('{kunjungan}', 'show')->name('show');
         Route::post('{kunjungan}/batal', 'batal')->name('batal');

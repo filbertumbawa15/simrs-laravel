@@ -17,7 +17,34 @@
     x-data="{
         tipe: '{{ old('tipe', 'RJ') }}',
         penjamin: '{{ old('penjamin', 'UMUM') }}',
-    }">
+        poliId: '{{ old('poli_id', '') }}',
+        dokterId: '{{ old('dokter_id', '') }}',
+        dokterList: [],
+        loadingDokter: false,
+        async loadDokter() {
+            this.dokterId = '';
+            if (! this.poliId) {
+                this.dokterList = [];
+                return;
+            }
+            this.loadingDokter = true;
+            try {
+                const res = await fetch(`/kunjungan/dokter-by-poli/${this.poliId}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                });
+                const json = await res.json();
+                this.dokterList = json.data || [];
+            } catch (e) {
+                console.error('Load dokter failed:', e);
+                window.notify?.error('Gagal memuat daftar dokter. Coba lagi.');
+                this.dokterList = [];
+            } finally {
+                this.loadingDokter = false;
+            }
+        },
+    }"
+    x-init="if (poliId) loadDokter()">
     @csrf
     <input type="hidden" name="pasien_id" value="{{ $pasien->id }}">
 
@@ -166,7 +193,7 @@
         </div>
     </div>
 
-    {{-- Pilih Poli (RJ only) --}}
+    {{-- Pilih Poli + Dokter (RJ only) — Dokter reactive filter by poli --}}
     <div class="card" x-show="tipe === 'RJ'" x-transition>
         <div class="card-header">
             <h3 class="font-semibold text-gray-800">Tujuan Poli</h3>
@@ -174,25 +201,37 @@
         <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="label">Poli <span class="text-red-500">*</span></label>
-                <select name="poli_id" class="select">
+                <select name="poli_id" x-model="poliId" @change="loadDokter()" class="select">
                     <option value="">— Pilih poli —</option>
                     @foreach ($poli as $p)
-                    <option value="{{ $p->id }}" @selected(old('poli_id')===$p->id)>
-                        {{ $p->nama }} ({{ $p->lokasi }})
-                    </option>
+                        <option value="{{ $p->id }}">{{ $p->nama }} @if($p->lokasi)({{ $p->lokasi }})@endif</option>
                     @endforeach
                 </select>
             </div>
             <div>
-                <label class="label">Dokter <span class="text-red-500">*</span></label>
-                <select name="dokter_id" class="select">
-                    <option value="">— Pilih dokter —</option>
-                    @foreach ($dokter as $d)
-                    <option value="{{ $d->id }}" @selected(old('dokter_id')===$d->id)>
-                        {{ $d->nama_lengkap }} ({{ $d->spesialisasi }})
-                    </option>
-                    @endforeach
+                <label class="label flex items-center gap-2">
+                    Dokter <span class="text-red-500">*</span>
+                    <span x-show="loadingDokter" class="text-xs text-gray-400">⏳ memuat…</span>
+                </label>
+                <select name="dokter_id" x-model="dokterId" class="select"
+                        :disabled="!poliId || loadingDokter">
+                    <template x-if="!poliId">
+                        <option value="">— Pilih poli dulu —</option>
+                    </template>
+                    <template x-if="poliId && !loadingDokter && dokterList.length === 0">
+                        <option value="">— Tidak ada dokter yang praktek di poli ini —</option>
+                    </template>
+                    <template x-if="poliId && dokterList.length > 0">
+                        <option value="">— Pilih dokter —</option>
+                    </template>
+                    <template x-for="d in dokterList" :key="d.id">
+                        <option :value="d.id" x-text="`${d.nama_lengkap} (${d.spesialisasi})`"
+                                :selected="d.id === dokterId"></option>
+                    </template>
                 </select>
+                <p class="help" x-show="poliId && !loadingDokter && dokterList.length === 0">
+                    Belum ada jadwal dokter di poli ini. Hubungi admin master data.
+                </p>
             </div>
         </div>
     </div>
